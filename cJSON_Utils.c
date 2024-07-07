@@ -53,15 +53,8 @@
 #include "cJSON_Utils.h"
 
 /* define our own boolean type */
-#ifdef true
-#undef true
-#endif
-#define true ((cJSON_bool)1)
-
-#ifdef false
-#undef false
-#endif
-#define false ((cJSON_bool)0)
+#define cjson_true ((cJSON_bool)1)
+#define cjson_false ((cJSON_bool)0)
 
 static unsigned char* cJSONUtils_strdup(const unsigned char* const string)
 {
@@ -121,7 +114,7 @@ static cJSON_bool compare_pointers(const unsigned char *name, const unsigned cha
 {
     if ((name == NULL) || (pointer == NULL))
     {
-        return false;
+        return cjson_false;
     }
 
     for (; (*name != '\0') && (*pointer != '\0') && (*pointer != '/'); (void)name++, pointer++) /* compare until next '/' */
@@ -132,7 +125,7 @@ static cJSON_bool compare_pointers(const unsigned char *name, const unsigned cha
             if (((pointer[1] != '0') || (*name != '~')) && ((pointer[1] != '1') || (*name != '/')))
             {
                 /* invalid escape sequence or wrong character in *name */
-                return false;
+                return cjson_false;
             }
             else
             {
@@ -141,16 +134,16 @@ static cJSON_bool compare_pointers(const unsigned char *name, const unsigned cha
         }
         else if ((!case_sensitive && (tolower(*name) != tolower(*pointer))) || (case_sensitive && (*name != *pointer)))
         {
-            return false;
+            return cjson_false;
         }
     }
     if (((*pointer != 0) && (*pointer != '/')) != (*name != 0))
     {
         /* one string has ended, the other not */
-        return false;;
+        return cjson_false;;
     }
 
-    return true;
+    return cjson_true;
 }
 
 /* calculate the length of a string if encoded as JSON pointer with ~0 and ~1 escape sequences */
@@ -347,12 +340,12 @@ static cJSON *get_item_from_pointer(cJSON * const object, const char * pointer, 
 
 CJSON_PUBLIC(cJSON *) cJSONUtils_GetPointer(cJSON * const object, const char *pointer)
 {
-    return get_item_from_pointer(object, pointer, false);
+    return get_item_from_pointer(object, pointer, cjson_false);
 }
 
 CJSON_PUBLIC(cJSON *) cJSONUtils_GetPointerCaseSensitive(cJSON * const object, const char *pointer)
 {
-    return get_item_from_pointer(object, pointer, true);
+    return get_item_from_pointer(object, pointer, cjson_true);
 }
 
 /* JSON Patch implementation. */
@@ -606,7 +599,7 @@ static cJSON_bool compare_json(cJSON *a, cJSON *b, const cJSON_bool case_sensiti
     if ((a == NULL) || (b == NULL) || ((a->type & 0xFF) != (b->type & 0xFF)))
     {
         /* mismatched type. */
-        return false;
+        return cjson_false;
     }
     switch (a->type & 0xFF)
     {
@@ -614,22 +607,22 @@ static cJSON_bool compare_json(cJSON *a, cJSON *b, const cJSON_bool case_sensiti
             /* numeric mismatch. */
             if ((a->valueint != b->valueint) || (!compare_double(a->valuedouble, b->valuedouble)))
             {
-                return false;
+                return cjson_false;
             }
             else
             {
-                return true;
+                return cjson_true;
             }
 
         case cJSON_String:
             /* string mismatch. */
             if (strcmp(a->valuestring, b->valuestring) != 0)
             {
-                return false;
+                return cjson_false;
             }
             else
             {
-                return true;
+                return cjson_true;
             }
 
         case cJSON_Array:
@@ -638,18 +631,18 @@ static cJSON_bool compare_json(cJSON *a, cJSON *b, const cJSON_bool case_sensiti
                 cJSON_bool identical = compare_json(a, b, case_sensitive);
                 if (!identical)
                 {
-                    return false;
+                    return cjson_false;
                 }
             }
 
             /* array size mismatch? (one of both children is not NULL) */
             if ((a != NULL) || (b != NULL))
             {
-                return false;
+                return cjson_false;
             }
             else
             {
-                return true;
+                return cjson_true;
             }
 
         case cJSON_Object:
@@ -657,36 +650,36 @@ static cJSON_bool compare_json(cJSON *a, cJSON *b, const cJSON_bool case_sensiti
             sort_object(b, case_sensitive);
             for ((void)(a = a->child), b = b->child; (a != NULL) && (b != NULL); (void)(a = a->next), b = b->next)
             {
-                cJSON_bool identical = false;
+                cJSON_bool identical = cjson_false;
                 /* compare object keys */
                 if (compare_strings((unsigned char*)a->string, (unsigned char*)b->string, case_sensitive))
                 {
                     /* missing member */
-                    return false;
+                    return cjson_false;
                 }
                 identical = compare_json(a, b, case_sensitive);
                 if (!identical)
                 {
-                    return false;
+                    return cjson_false;
                 }
             }
 
             /* object length mismatch (one of both children is not null) */
             if ((a != NULL) || (b != NULL))
             {
-                return false;
+                return cjson_false;
             }
             else
             {
-                return true;
+                return cjson_true;
             }
 
         default:
             break;
     }
 
-    /* null, true or false */
-    return true;
+    /* null, cjson_true or cjson_false */
+    return cjson_true;
 }
 
 /* non broken version of cJSON_InsertItemInArray */
@@ -1053,7 +1046,7 @@ CJSON_PUBLIC(int) cJSONUtils_ApplyPatches(cJSON * const object, const cJSON * co
 
     while (current_patch != NULL)
     {
-        status = apply_patch(object, current_patch, false);
+        status = apply_patch(object, current_patch, cjson_false);
         if (status != 0)
         {
             return status;
@@ -1082,7 +1075,7 @@ CJSON_PUBLIC(int) cJSONUtils_ApplyPatchesCaseSensitive(cJSON * const object, con
 
     while (current_patch != NULL)
     {
-        status = apply_patch(object, current_patch, true);
+        status = apply_patch(object, current_patch, cjson_true);
         if (status != 0)
         {
             return status;
@@ -1288,7 +1281,7 @@ CJSON_PUBLIC(cJSON *) cJSONUtils_GeneratePatches(cJSON * const from, cJSON * con
     }
 
     patches = cJSON_CreateArray();
-    create_patches(patches, (const unsigned char*)"", from, to, false);
+    create_patches(patches, (const unsigned char*)"", from, to, cjson_false);
 
     return patches;
 }
@@ -1303,19 +1296,19 @@ CJSON_PUBLIC(cJSON *) cJSONUtils_GeneratePatchesCaseSensitive(cJSON * const from
     }
 
     patches = cJSON_CreateArray();
-    create_patches(patches, (const unsigned char*)"", from, to, true);
+    create_patches(patches, (const unsigned char*)"", from, to, cjson_true);
 
     return patches;
 }
 
 CJSON_PUBLIC(void) cJSONUtils_SortObject(cJSON * const object)
 {
-    sort_object(object, false);
+    sort_object(object, cjson_false);
 }
 
 CJSON_PUBLIC(void) cJSONUtils_SortObjectCaseSensitive(cJSON * const object)
 {
-    sort_object(object, true);
+    sort_object(object, cjson_true);
 }
 
 static cJSON *merge_patch(cJSON *target, const cJSON * const patch, const cJSON_bool case_sensitive)
@@ -1380,12 +1373,12 @@ static cJSON *merge_patch(cJSON *target, const cJSON * const patch, const cJSON_
 
 CJSON_PUBLIC(cJSON *) cJSONUtils_MergePatch(cJSON *target, const cJSON * const patch)
 {
-    return merge_patch(target, patch, false);
+    return merge_patch(target, patch, cjson_false);
 }
 
 CJSON_PUBLIC(cJSON *) cJSONUtils_MergePatchCaseSensitive(cJSON *target, const cJSON * const patch)
 {
-    return merge_patch(target, patch, true);
+    return merge_patch(target, patch, cjson_true);
 }
 
 static cJSON *generate_merge_patch(cJSON * const from, cJSON * const to, const cJSON_bool case_sensitive)
@@ -1472,10 +1465,10 @@ static cJSON *generate_merge_patch(cJSON * const from, cJSON * const to, const c
 
 CJSON_PUBLIC(cJSON *) cJSONUtils_GenerateMergePatch(cJSON * const from, cJSON * const to)
 {
-    return generate_merge_patch(from, to, false);
+    return generate_merge_patch(from, to, cjson_false);
 }
 
 CJSON_PUBLIC(cJSON *) cJSONUtils_GenerateMergePatchCaseSensitive(cJSON * const from, cJSON * const to)
 {
-    return generate_merge_patch(from, to, true);
+    return generate_merge_patch(from, to, cjson_true);
 }
