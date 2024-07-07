@@ -237,31 +237,6 @@ if(ENABLE_TARGET_EXPORT)
         DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}/cmake/cJSON")
 endif()
 
-option(ENABLE_CJSON_TEST "Enable building cJSON test" ON)
-if(ENABLE_CJSON_TEST)
-    enable_testing()
-
-    set(TEST_CJSON cJSON_test)
-    add_executable("${TEST_CJSON}" test.c)
-    target_link_libraries("${TEST_CJSON}" "${CJSON_LIB}")
-
-    add_test(NAME ${TEST_CJSON} COMMAND "${CMAKE_CURRENT_BINARY_DIR}/${TEST_CJSON}")
-
-    # Disable -fsanitize=float-divide-by-zero for cJSON_test
-    if (FLAG_SUPPORTED_fsanitizefloatdividebyzero)
-        if ("${CMAKE_VERSION}" VERSION_LESS "2.8.12")
-            set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-sanitize=float-divide-by-zero")
-        else()
-            target_compile_options(${TEST_CJSON} PRIVATE "-fno-sanitize=float-divide-by-zero")
-        endif()
-    endif()
-
-    #"check" target that automatically builds everything and runs the tests
-    add_custom_target(check
-        COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-        DEPENDS ${TEST_CJSON})
-endif()
-
 #Create the uninstall target
 option(ENABLE_CJSON_UNINSTALL "Enable creating uninstall target" ON)
 if(ENABLE_CJSON_UNINSTALL)
@@ -274,6 +249,3 @@ option(ENABLE_LOCALES "Enable the use of locales" ON)
 if(ENABLE_LOCALES)
 	add_definitions(-DENABLE_LOCALES)
 endif()
-
-add_subdirectory(tests)
-add_subdirectory(fuzzing)
